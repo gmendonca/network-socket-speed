@@ -7,8 +7,9 @@
 
 int main(int argc, char *argv[]){
 
-	struct sockaddr_in server_addr;
-	int sckt;
+	struct sockaddr_in server_addr, client_addr;
+	int sckt, sckt_client;
+	socklen_t client;
 
 
 	sckt = socket(AF_INET, SOCK_STREAM, 0);
@@ -29,6 +30,12 @@ int main(int argc, char *argv[]){
 	    printf("error binding socket");
 	    return -1;
 	}
+
+	//keep listening
+	listen(sckt,5);
+	client = sizeof(client_addr);
+    sckt_client = accept(sckt, (struct sockaddr *) &client_addr, &client);
+
 
 	close(sckt);
 	return 0;
