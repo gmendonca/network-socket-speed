@@ -8,15 +8,17 @@
 int main(int argc, char *argv[]){
 
 	struct sockaddr_in server_addr, client_addr;
-	int sckt, sckt_client;
+	int sckt, sckt_client, status;
 	socklen_t client;
+
+	char *buffer;
 
 
 	sckt = socket(AF_INET, SOCK_STREAM, 0);
 
 	if(sckt == -1)
 	{
-	    printf("error opening socket");
+	    printf("error opening socket\n");
 	    return -1;
 	}
 
@@ -27,7 +29,7 @@ int main(int argc, char *argv[]){
 
 	if(bind(sckt, (struct sockaddr *)&server_addr,sizeof(struct sockaddr_in) ) == -1)
 	{
-	    printf("error binding socket");
+	    printf("error binding socket\n");
 	    return -1;
 	}
 
@@ -36,7 +38,21 @@ int main(int argc, char *argv[]){
 	client = sizeof(client_addr);
     sckt_client = accept(sckt, (struct sockaddr *) &client_addr, &client);
 
+    if (sckt_client < 0){
+    	printf("Didn't accept\n");
+    	return -1;
+    } 
+
+    buffer = (char*)malloc(255);
+    status = read(sckt_client,buffer,255);
+    if (status < 0){
+    	printf("Cannot read from the socket\n");
+    	return -1;
+    }
+
+    printf("Message: %s\n",buffer);
 
 	close(sckt);
+	close(sckt_client);
 	return 0;
 }
