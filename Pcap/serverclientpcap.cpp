@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <ctime>
 #include <pthread.h>
+#include <pcap.h>
 
 #define NUM_THREADS 2
 
@@ -131,18 +132,59 @@ void* tcp_client(void *whatever){
 	exit(EXIT_SUCCESS);
 }
 
+void my_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_char* packet) {
+    static int count = 1;
+    fprintf(stdout,"%d, ",count);
+    if(count == 4)
+        fprintf(stdout,"Come on baby sayyy you love me!!! ");
+    if(count == 7)
+        fprintf(stdout,"Tiiimmmeesss!! ");
+    fflush(stdout);
+    count++;
+}
+
+void* packetcapture(void *whatever) { 
+    int i;
+    char *dev; 
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t* descr;
+    const u_char *packet;
+    struct pcap_pkthdr hdr;     /* pcap.h */
+    struct ether_header *eptr;  /* net/ethernet.h */
+
+    /* grab a device to peak into... */
+    //dev = pcap_lookupdev(errbuf);
+    dev = (char*)h.server;
+    if(dev == NULL){
+    	printf("%s\n",errbuf);
+    	exit(EXIT_FAILURE);
+    }
+    /* open device for reading */
+    descr = pcap_open_live(dev,BUFSIZ,0,-1,errbuf);
+
+    if(descr == NULL){
+    	printf("pcap_open_live(): %s\n",errbuf);
+    	exit(EXIT_FAILURE);
+    }
+
+    pcap_loop(descr,10,my_callback,NULL);
+    
+    pthread_exit(NULL);
+	exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[]){
 	
-	int t1,t2;
-	int starttime, stoptime;
-	pthread_t thread1, thread2;
+	int t1,t2,t3;
+	int starttime, stoptime, startpcaptime, stoppcaptime;
+	pthread_t thread1, thread2, thread3;
 
 	h.server = gethostbyname(argv[1]);
 	h.port = atoi(argv[2]);
 
 	FILE *fp;
 
-	fp = fopen("../txt/10mb.txt", "rb");
+	fp = fopen("../txt/1b.txt", "rb");
     if (!fp) {
         fprintf(stderr, "Failed to load file.\n");
         return -1;
@@ -172,6 +214,16 @@ int main(int argc, char *argv[]){
 
 	const char *message1 = "Thread 1";
 	const char *message2 = "Thread 2";
+	const char *message3 = "Thread 3";
+	
+	startpcaptime = GetTimeMs();
+    t3 = pthread_create(&thread3, NULL, packetcapture, (void *)message3);
+    if (t3) {
+        printf("ERROR; thread tcp_server");
+        return -1;
+    }
+    stoppcaptime = GetTimeMs();
+
 
 	starttime = GetTimeMs();
 	t1 = pthread_create(&thread1, NULL, tcp_server, (void *)message1);
@@ -187,7 +239,8 @@ int main(int argc, char *argv[]){
     }
 	stoptime = GetTimeMs();
 
-    printf("Duration= %d us\n", stoptime - starttime);
+    printf("Duration = %d us\n", stoptime - starttime);
+    printf("Duration pcap = %d us\n", stoppcaptime - startpcaptime);
 
 	pthread_exit(NULL);
 	return 0;
