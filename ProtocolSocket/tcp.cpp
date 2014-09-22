@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <netdb.h> 
 #include <string.h>
+#include <sys/time.h>
+#include <ctime>
 
 int GetTimeMs()
 {
@@ -26,16 +28,16 @@ int GetTimeMs()
 
 int main(int argc, char *argv[]){
 
-	struct sockaddr_in server_addr, client_addr;
-	int sckt_server, sckt_client, status;
+	struct sockaddr_in server_addr;
+	int sckt, status;	
+	char *buffer, *rcvbuffer;
+	unsigned int buffer_size;
+	int bytesRcvd, totalBytesRcvd;
 	socklen_t client;
 
-	char *buffer;
+	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	/* ---------------- Process 1 - Server ----------------*/
-	sckt_server = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-	if(sckt_server == -1)
+	if(sckt == -1)
 	{
 	    printf("error opening socket\n");
 	    return -1;
@@ -46,23 +48,30 @@ int main(int argc, char *argv[]){
 	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //loopback interface
 	server_addr.sin_family = AF_INET;
 
-	if(bind(sckt_server, (struct sockaddr *)&server_addr,sizeof(struct sockaddr_in) ) == -1)
+	if(bind(sckt, (struct sockaddr *)&server_addr,sizeof(struct sockaddr_in) ) == -1)
 	{
 	    printf("error binding socket\n");
 	    return -1;
 	}
 
 	//keep listening
-	listen(sckt_server,5);
+	listen(sckt,5);
+	client = sizeof(client_addr);
+    sckt_client = accept(sckt, (struct sockaddr *) &client_addr, &client);
 
-	/* ---------------- Process 2 - Client ----------------*/
-
-	sckt_client = socket();
-	
-	if (connect(sckt,(struct sockaddr *) &server_addr,sizeof(server_addr)) < 0) {
-		printf("Couldn't connect\n");
+    if (sckt_client < 0){
+    	printf("Didn't accept\n");
     	return -1;
-	}
+    } 
+
+    buffer = (char*)malloc(255);
+    status = read(sckt_client,buffer,255);
+    if (status < 0){
+    	printf("Cannot read from the socket\n");
+    	return -1;
+    }
+
+    printf("Message: %s\n",buffer);
 
 	close(sckt);
 	close(sckt_client);
