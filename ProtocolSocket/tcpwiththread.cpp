@@ -44,10 +44,8 @@ void* tcp_server(void *whatever){
 	int starttime, stoptime;
 	char *buffer;
 	socklen_t client;
-	int iSetOption = 1;
 
 	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
 
 	if(sckt == -1)
 	{
@@ -83,10 +81,8 @@ void* tcp_server(void *whatever){
     	exit(EXIT_FAILURE);
     }
     stoptime = GetTimeMs();
-
-    //printf("Message: %s\n",buffer);
     printf("Duration server read = %d us\n", stoptime - starttime);
-    
+
 	close(sckt);
 	close(sckt_client);
 	pthread_exit(NULL);
@@ -99,10 +95,8 @@ void* tcp_client(void *whatever){
 	int sckt, status, len;
 	int starttime, stoptime;
 	struct hostent *server;
-	int iSetOption = 1;
 
 	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
 
 	if(sckt == -1)
 	{
@@ -130,8 +124,7 @@ void* tcp_client(void *whatever){
 	  	printf("Couldn't write the message\n");
 	   	exit(EXIT_FAILURE);
 	}
-	stoptime = GetTimeMs();
-	    
+	stoptime = GetTimeMs();	    
 
     printf("Duration client write = %d us\n", stoptime - starttime);
 
@@ -142,15 +135,15 @@ void* tcp_client(void *whatever){
 
 int main(int argc, char *argv[]){
 	
-	int t1,t2;
+	int t1,t2,t3;
 	int starttime, stoptime;
-	pthread_t thread1, thread2;
+	pthread_t thread1, thread2, thread3;
 
 	h.server = gethostbyname(argv[1]);
 	h.port = atoi(argv[2]);
 
 	FILE *fp;
-	
+
 	if(strcmp(argv[3], "1b") == 0)fp = fopen("../txt/1b.txt", "rb");
 	else if(strcmp(argv[3], "1kb") == 0)fp = fopen("../txt/1kb.txt", "rb");
 	else if(strcmp(argv[3], "64kb") == 0)fp = fopen("../txt/64kb.txt", "rb");
@@ -186,6 +179,7 @@ int main(int argc, char *argv[]){
 
 	const char *message1 = "Thread 1";
 	const char *message2 = "Thread 2";
+	const char *message3 = "Thread 3";
 
 	starttime = GetTimeMs();
 	t1 = pthread_create(&thread1, NULL, tcp_server, (void *)message1);
@@ -196,6 +190,12 @@ int main(int argc, char *argv[]){
 
     t2 = pthread_create(&thread2, NULL, tcp_client, (void *)message2);
     if (t2) {
+        printf("ERROR; thread tcp_client");
+        return -1;
+    }
+
+    t3 = pthread_create(&thread3, NULL, tcp_client, (void *)message3);
+    if (t3) {
         printf("ERROR; thread tcp_client");
         return -1;
     }

@@ -39,15 +39,11 @@ int GetTimeMs()
 
 void* tcp_server(void *whatever){
 
-	struct sockaddr_in server_addr, client_addr;
-	int sckt, sckt_client, status;
-	int starttime, stoptime;
+	struct sockaddr_in server_addr;
+	int sckt;
 	char *buffer;
-	socklen_t client;
-	int iSetOption = 1;
 
-	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
+	sckt = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 	if(sckt == -1)
 	{
@@ -67,28 +63,8 @@ void* tcp_server(void *whatever){
 
 	//keep listening
 	listen(sckt,5);
-	client = sizeof(client_addr);
-    sckt_client = accept(sckt, (struct sockaddr *) &client_addr, &client);
-
-    if (sckt_client < 0){
-    	printf("Didn't accept\n");
-    	exit(EXIT_FAILURE);
-    } 
-
-    starttime = GetTimeMs();
-    buffer = (char *)calloc( 1, lSize+1 );
-    status = read(sckt_client,buffer,lSize);
-    if (status < 0){
-    	printf("Cannot read from the socket\n");
-    	exit(EXIT_FAILURE);
-    }
-    stoptime = GetTimeMs();
-
-    //printf("Message: %s\n",buffer);
-    printf("Duration server read = %d us\n", stoptime - starttime);
     
 	close(sckt);
-	close(sckt_client);
 	pthread_exit(NULL);
 	exit(EXIT_SUCCESS);
 }
@@ -99,10 +75,8 @@ void* tcp_client(void *whatever){
 	int sckt, status, len;
 	int starttime, stoptime;
 	struct hostent *server;
-	int iSetOption = 1;
 
-	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
+	sckt = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 	if(sckt == -1)
 	{
@@ -150,13 +124,12 @@ int main(int argc, char *argv[]){
 	h.port = atoi(argv[2]);
 
 	FILE *fp;
-	
+
 	if(strcmp(argv[3], "1b") == 0)fp = fopen("../txt/1b.txt", "rb");
 	else if(strcmp(argv[3], "1kb") == 0)fp = fopen("../txt/1kb.txt", "rb");
 	else if(strcmp(argv[3], "64kb") == 0)fp = fopen("../txt/64kb.txt", "rb");
 	else if(strcmp(argv[3], "1mb") == 0)fp = fopen("../txt/1mb.txt", "rb");
 	else fp = fopen("../txt/alice.txt", "rb");
-
     if (!fp) {
         fprintf(stderr, "Failed to load file.\n");
         return -1;

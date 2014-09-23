@@ -41,12 +41,13 @@ void* tcp_server(void *whatever){
 
 	struct sockaddr_in server_addr, client_addr;
 	int sckt, sckt_client, status;
+	int starttime, stoptime;
 	char *buffer;
-	unsigned int buffer_size;
-	int bytesRcvd, totalBytesRcvd;
 	socklen_t client;
+	int iSetOption = 1;
 
 	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
 
 	if(sckt == -1)
 	{
@@ -74,97 +75,26 @@ void* tcp_server(void *whatever){
     	exit(EXIT_FAILURE);
     } 
 
-    
+    starttime = GetTimeMs();
     buffer = (char *)calloc( 1, lSize+1 );
     status = read(sckt_client,buffer,lSize);
     if (status < 0){
     	printf("Cannot read from the socket\n");
     	exit(EXIT_FAILURE);
     }
+    stoptime = GetTimeMs();
 
-    int success = 0;
-	while(success == 0)
-	{
-		client = sizeof(client_addr);
-    	sckt_client = accept(sckt, (struct sockaddr *) &client_addr, &client);
+    //printf("Message: %s\n",buffer);
+    printf("Duration server read = %d us\n", stoptime - starttime);
 
-    	if (sckt_client < 0){
-    		printf("Didn't accept\n");
-    		exit(EXIT_FAILURE);
-    	} 
-
-		/*Receive File from Client */
-		char* fr_name = "/home/aryan/Desktop/receive.txt";
-		FILE *fr = fopen(fr_name, "a");
-		if(fr == NULL)
-			printf("File %s Cannot be opened file on server.\n", fr_name);
-		else
-		{
-			bzero(revbuf, LENGTH); 
-			int fr_block_sz = 0;
-			while((fr_block_sz = recv(nsockfd, revbuf, LENGTH, 0)) > 0) 
-			{
-			    int write_sz = fwrite(revbuf, sizeof(char), fr_block_sz, fr);
-				if(write_sz < fr_block_sz)
-			    {
-			        error("File write failed on server.\n");
-			    }
-				bzero(revbuf, LENGTH);
-				if (fr_block_sz == 0 || fr_block_sz != 512) 
-				{
-					break;
-				}
-			}
-			if(fr_block_sz < 0)
-		    {
-		        if (errno == EAGAIN)
-	        	{
-	                printf("recv() timed out.\n");
-	            }
-	            else
-	            {
-	                fprintf(stderr, "recv() failed due to errno = %d\n", errno);
-					exit(1);
-	            }
-        	}
-			printf("Ok received from client!\n");
-			fclose(fr); 
-		}
-
-		/* Call the Script */
-		system("cd ; chmod +x script.sh ; ./script.sh");
-
-		/* Send File to Client */
-		//if(!fork())
-		//{
-		    char* fs_name = "/home/aryan/Desktop/output.txt";
-		    char sdbuf[LENGTH]; // Send buffer
-		    printf("[Server] Sending %s to the Client...", fs_name);
-		    FILE *fs = fopen(fs_name, "r");
-		    if(fs == NULL)
-		    {
-		        fprintf(stderr, "ERROR: File %s not found on server. (errno = %d)\n", fs_name, errno);
-				exit(1);
-		    }
-
-		    bzero(sdbuf, LENGTH); 
-		    int fs_block_sz; 
-		    while((fs_block_sz = fread(sdbuf, sizeof(char), LENGTH, fs))>0)
-		    {
-		        if(send(nsockfd, sdbuf, fs_block_sz, 0) < 0)
-		        {
-		            fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", fs_name, errno);
-		            exit(1);
-		        }
-		        bzero(sdbuf, LENGTH);
-		    }
-		    printf("Ok sent to client!\n");
-		    success = 1;
-		    close(nsockfd);
-		    printf("[Server] Connection with Client closed. Server will wait now...\n");
-		    while(waitpid(-1, NULL, WNOHANG) > 0);
-		//}
+    starttime = GetTimeMs();
+    status = write(sckt_client,buffer,lSize);
+	if (status < 0){
+	  	printf("Couldn't write the message\n");
+	   	exit(EXIT_FAILURE);
 	}
+	stoptime = GetTimeMs();
+    printf("Duration server write back = %d us\n", stoptime - starttime);
 
 	close(sckt);
 	close(sckt_client);
@@ -176,9 +106,12 @@ void* tcp_client(void *whatever){
 
 	struct sockaddr_in server_addr;
 	int sckt, status, len;
+	int starttime, stoptime;
 	struct hostent *server;
+	int iSetOption = 1;
 
 	sckt = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
 
 	if(sckt == -1)
 	{
@@ -200,13 +133,29 @@ void* tcp_client(void *whatever){
     	exit(EXIT_FAILURE);
 	}
 
-    len = strlen(h.buffer);
+	starttime = GetTimeMs();
+	status = write(sckt, h.buffer, lSize);
+	if (status < 0){
+	  	printf("Couldn't write the message\n");
+	   	exit(EXIT_FAILURE);
+	}
+	stoptime = GetTimeMs();	    
 
-    status = write(sckt, h.buffer, len);
+    printf("Duration client write = %d us\n", stoptime - starttime);
+
+    //sleep(2);
+
+    starttime = GetTimeMs();
+    char *message = (char *)calloc( 1, lSize+1 );
+    status = read(sckt,message,lSize);
     if (status < 0){
-    	printf("Couldn't write the message\n");
+    	printf("Cannot read from the socket\n");
     	exit(EXIT_FAILURE);
     }
+    stoptime = GetTimeMs();
+
+    printf("Duration client read back = %d us\n", stoptime - starttime);
+    //printf("%s\n", message);
 
 	close(sckt);
 	pthread_exit(NULL);
@@ -224,7 +173,12 @@ int main(int argc, char *argv[]){
 
 	FILE *fp;
 
-	fp = fopen("../txt/10mb.txt", "rb");
+	if(strcmp(argv[3], "1b") == 0)fp = fopen("../txt/1b.txt", "rb");
+	else if(strcmp(argv[3], "1kb") == 0)fp = fopen("../txt/1kb.txt", "rb");
+	else if(strcmp(argv[3], "64kb") == 0)fp = fopen("../txt/64kb.txt", "rb");
+	else if(strcmp(argv[3], "1mb") == 0)fp = fopen("../txt/1mb.txt", "rb");
+	else fp = fopen("../txt/alice.txt", "rb");
+
     if (!fp) {
         fprintf(stderr, "Failed to load file.\n");
         return -1;
@@ -269,7 +223,7 @@ int main(int argc, char *argv[]){
     }
 	stoptime = GetTimeMs();
 
-    printf("Duration= %d us\n", stoptime - starttime);
+    //printf("Duration= %d us\n", stoptime - starttime);
 
 	pthread_exit(NULL);
 	return 0;
