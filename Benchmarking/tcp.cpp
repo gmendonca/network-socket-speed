@@ -150,10 +150,10 @@ int main(int argc, char *argv[]){
 
 	FILE *fp;
 	
-	if(strcmp(argv[3], "1b") == 0)fp = fopen("txt/1b.txt", "rb");
-	else if(strcmp(argv[3], "1kb") == 0)fp = fopen("txt/1kb.txt", "rb");
-	else if(strcmp(argv[3], "64kb") == 0)fp = fopen("txt/64kb.txt", "rb");
-	else if(strcmp(argv[3], "1mb") == 0)fp = fopen("txt/1mb.txt", "rb");
+	if(strcmp(argv[3], "1b") == 0)fp = fopen("../txt/1b.txt", "rb");
+	else if(strcmp(argv[3], "1kb") == 0)fp = fopen("../txt/1kb.txt", "rb");
+	else if(strcmp(argv[3], "64kb") == 0)fp = fopen("../txt/64kb.txt", "rb");
+	else if(strcmp(argv[3], "1mb") == 0)fp = fopen("../txt/1mb.txt", "rb");
 	else fp = fopen("../txt/alice.txt", "rb");
 
     if (!fp) {
